@@ -20,30 +20,45 @@ const FILE_EXTENSIONS = {
 };
 
 function loadEnvFile() {
-  const envPath = path.join(__dirname, "..", ".env");
-  if (!fs.existsSync(envPath)) return;
+  const candidates = [
+    path.join(__dirname, ".env"),
+    path.join(__dirname, "..", ".env"),
+  ];
 
-  const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
+  for (const envPath of candidates) {
+    if (!fs.existsSync(envPath)) continue;
 
-    const separator = trimmed.indexOf("=");
-    if (separator === -1) continue;
+    const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
 
-    const key = trimmed.slice(0, separator).trim();
-    if (!key || process.env[key] !== undefined) continue;
+      const separator = trimmed.indexOf("=");
+      if (separator === -1) continue;
 
-    let value = trimmed.slice(separator + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
+      const key = trimmed.slice(0, separator).trim();
+      if (!key || process.env[key] !== undefined) continue;
+
+      let value = trimmed.slice(separator + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+
+      process.env[key] = value;
     }
-
-    process.env[key] = value;
   }
+}
+
+function resolveSupabaseUrl(value) {
+  if (!value) return "";
+
+  return value
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/rest\/v1$/i, "");
 }
 
 loadEnvFile();
@@ -51,7 +66,7 @@ loadEnvFile();
 let supabase;
 
 function getSupabase() {
-  const url = process.env.SUPABASE_URL;
+  const url = resolveSupabaseUrl(process.env.SUPABASE_URL);
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) return null;
 
@@ -167,8 +182,8 @@ async function saveReference(req, res) {
   try {
     const { srcUrl, pageUrl } = req.body || {};
 
-    if (!srcUrl || !pageUrl) {
-      return res.status(400).json({ error: "srcUrl e pageUrl são obrigatórios." });
+    if (!srcUrl) {
+      return res.status(400).json({ error: "srcUrl é obrigatório." });
     }
 
     const client = getSupabase();
@@ -203,7 +218,7 @@ async function saveReference(req, res) {
       .from("references")
       .insert({
         image_url: publicUrlData.publicUrl,
-        source_url: pageUrl,
+        source_url: pageUrl || null,
         hex_colors: hexColors,
       })
       .select()
@@ -242,7 +257,15 @@ app.use((error, req, res, next) => {
 
 if (require.main === module) {
   const port = Number(process.env.PORT) || 3000;
-  app.listen(port);
+  app.listen(port, () => {
+    const configured = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+    console.log(`Moodie API em http://localhost:${port}`);
+    if (!configured) {
+      console.log(
+        "Supabase não está configurado. Preencha api/api/.env com SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY."
+      );
+    }
+  });
 }
 
 module.exports = app;
