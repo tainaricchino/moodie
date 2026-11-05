@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Moodboard",
+  "description": "Gerenciador Inteligente de Moodboard & Inspirações Visual/UI",
+  "version": "1.0.0",
+  "permissions": ["contextMenus"],
+  "host_permissions": ["http://localhost:3000/*"],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
