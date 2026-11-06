@@ -3,8 +3,17 @@
   "name": "Moodboard",
   "description": "Gerenciador Inteligente de Moodboard & Inspirações Visual/UI",
   "version": "1.0.0",
-  "permissions": ["contextMenus"],
+  "permissions": ["contextMenus", "notifications", "tabs"],
   "host_permissions": ["http://localhost:3000/*"],
+  "action": {
+    "default_title": "Moodie",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
   "background": {
     "service_worker": "background.js"
   }
